@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantumFTP - Secure File Transfer</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-shield-alt text-primary" style="font-size: 3rem;"></i>
+            </div>
+            <h1 class="display-4 mb-3">QuantumFTP</h1>
+            <p class="lead text-muted">
+                Secure file encryption using AES-256-GCM with simulated Kyber key exchange
+            </p>
+        </header>
+
+        <!-- Security Features Info -->
+        <div class="row mb-5">
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <i class="fas fa-lock text-success mb-3" style="font-size: 2rem;"></i>
+                    <h5>AES-256-GCM Encryption</h5>
+                    <p class="text-muted small">
+                        Industry-standard authenticated encryption with 256-bit keys
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <i class="fas fa-atom text-info mb-3" style="font-size: 2rem;"></i>
+                    <h5>Quantum-Resistant</h5>
+                    <p class="text-muted small">
+                        Simulated Kyber key exchange for post-quantum security
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <i class="fas fa-check-circle text-warning mb-3" style="font-size: 2rem;"></i>
+                    <h5>Verified Integrity</h5>
+                    <p class="text-muted small">
+                        Cryptographic hashing ensures file integrity
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Mode Selection -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="mode" id="encrypt-mode" checked>
+                            <label class="btn btn-outline-primary" for="encrypt-mode">
+                                <i class="fas fa-shield-alt me-2"></i>Encrypt File
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="mode" id="send-mode">
+                            <label class="btn btn-outline-success" for="send-mode">
+                                <i class="fas fa-share me-2"></i>Send to QuantumFTP
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="mode" id="receive-mode">
+                            <label class="btn btn-outline-info" for="receive-mode">
+                                <i class="fas fa-download me-2"></i>Received Files
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <div class="row justify-content-center" id="encrypt-section">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-upload me-2"></i>
+                            Upload File for Encryption
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                            <!-- Drag and Drop Area -->
+                            <div class="upload-area" id="uploadArea">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                                    <h5>Drag & Drop File Here</h5>
+                                    <p class="text-muted">or click to browse</p>
+                                    <input type="file" name="file" id="fileInput" class="d-none" required accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.tar,.gz,.mp3,.mp4,.avi,.mov,.csv,.json,.xml">
+                                </div>
+                            </div>
+
+                            <!-- File Info Display -->
+                            <div id="fileInfo" class="mt-3" style="display: none;">
+                                <div class="d-flex align-items-center p-3 bg-light rounded">
+                                    <i class="fas fa-file me-3 text-primary"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold" id="fileName"></div>
+                                        <small class="text-muted" id="fileSize"></small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="changeFile">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Upload Button -->
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
+                                    <span class="upload-text">
+                                        <i class="fas fa-shield-alt me-2"></i>
+                                        Encrypt & Upload File
+                                    </span>
+                                    <span class="upload-spinner d-none">
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        Processing...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- File Type Information -->
+                <div class="mt-4">
+                    <details class="card">
+                        <summary class="card-header" style="cursor: pointer;">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Supported File Types & Security Information
+                        </summary>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Supported File Types:</h6>
+                                    <ul class="list-unstyled small text-muted">
+                                        <li><i class="fas fa-file-alt me-2"></i>Documents: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX</li>
+                                        <li><i class="fas fa-file-image me-2"></i>Images: PNG, JPG, JPEG, GIF</li>
+                                        <li><i class="fas fa-file-archive me-2"></i>Archives: ZIP, RAR, 7Z, TAR, GZ</li>
+                                        <li><i class="fas fa-file-audio me-2"></i>Media: MP3, MP4, AVI, MOV</li>
+                                        <li><i class="fas fa-file-code me-2"></i>Data: TXT, CSV, JSON, XML</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Security Features:</h6>
+                                    <ul class="list-unstyled small text-muted">
+                                        <li><i class="fas fa-check me-2 text-success"></i>AES-256-GCM authenticated encryption</li>
+                                        <li><i class="fas fa-check me-2 text-success"></i>Kyber post-quantum key exchange</li>
+                                        <li><i class="fas fa-check me-2 text-success"></i>SHA-256 file integrity verification</li>
+                                        <li><i class="fas fa-check me-2 text-success"></i>Secure random nonce generation</li>
+                                        <li><i class="fas fa-check me-2 text-success"></i>PBKDF2 key derivation (100k iterations)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Maximum file size: 16MB. This demo uses simulated Kyber for educational purposes.
+                                </small>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send to Peer Section -->
+        <div class="row justify-content-center" id="send-section" style="display: none;">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-share me-2"></i>
+                            Send File to QuantumFTP Server
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('send_file') }}" method="post" enctype="multipart/form-data" id="sendForm">
+                            <!-- Target QuantumFTP Server Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label for="target_host" class="form-label">QuantumFTP Server Host/IP</label>
+                                    <input type="text" class="form-control" id="target_host" name="target_host" 
+                                           placeholder="192.168.1.100 or quantumftp.example.com" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="target_port" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="target_port" name="target_port" 
+                                           value="5001" min="1" max="65535" required>
+                                </div>
+                            </div>
+
+                            <!-- File Upload -->
+                            <div class="upload-area" id="sendUploadArea">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                                    <h5>Select File to Send</h5>
+                                    <p class="text-muted">File will be encrypted before transmission</p>
+                                    <input type="file" name="file" id="sendFileInput" class="d-none" required>
+                                </div>
+                            </div>
+
+                            <!-- File Info Display -->
+                            <div id="sendFileInfo" class="mt-3" style="display: none;">
+                                <div class="d-flex align-items-center p-3 bg-light rounded">
+                                    <i class="fas fa-file me-3 text-primary"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold" id="sendFileName"></div>
+                                        <small class="text-muted" id="sendFileSize"></small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="changeSendFile">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Send Button -->
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-success btn-lg" id="sendBtn" disabled>
+                                    <i class="fas fa-share me-2"></i>
+                                    Send File to QuantumFTP
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- QuantumFTP Server Status -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-server me-2"></i>
+                            QuantumFTP Server Status
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="peer-status">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span>Checking server status...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Received Files Section -->
+        <div class="row justify-content-center" id="receive-section" style="display: none;">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-download me-2"></i>
+                            Received Files
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="received-files-list">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading received files...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/peer.js') }}"></script>
+</body>
+</html>
